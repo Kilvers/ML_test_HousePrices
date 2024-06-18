@@ -14,7 +14,7 @@ from operator import itemgetter
 import joblib
 
 
-import preprocessors
+from preprocessors import *
 
 
 if __name__ == "__main__":
@@ -34,7 +34,7 @@ if __name__ == "__main__":
                     'regressor__fit_intercept': [True, False]
                 },
 
-                {
+                { # RandomForest
                     'regressor': [RFR],
                     'regressor__n_estimators': [100, 200, 500, 1000],
                     'regressor__max_depth': [None, 10, 20, 30, 40, 50],
@@ -44,7 +44,7 @@ if __name__ == "__main__":
                     'regressor__bootstrap': [True, False]
                 },
 
-                {
+                {  # xgboost
                     'regressor': [XGB],
                     'regressor__n_estimators': [100, 200, 500, 1000],
                     'regressor__max_depth': [3, 4, 5, 6, 7, 8, 10],
@@ -57,18 +57,14 @@ if __name__ == "__main__":
                 }
             ]
 
-    #evaluating multiple classifiers
+    #evaluating multiple regressor
     #based on pipeline parameters
     #-------------------------------
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        df.drop(columns='price'), df.price.values, test_size=0.20, random_state=42)
-
     result=[]
 
     for params in parameters:
 
-        #classifier
+        #regressor
         regressor = params['regressor'][0]
         print('running' , regressor)
 
@@ -77,7 +73,7 @@ if __name__ == "__main__":
         params.pop('regressor')
         
 
-        #pipeline
+        #pipeline steps required
         steps=[('feature_creation_sqft_living', FeatureCreator_sqft('sqft_living',
                                                         'sqft_living15',
                                                         'change_sqft_living_flag')),
@@ -90,8 +86,7 @@ if __name__ == "__main__":
         ('regressor', regressor)]
 
         
-        #cross validation using
-        #Grid Search
+        #cross validation using Grid Search
         grid = GridSearchCV(Pipeline(steps= steps),
                             param_grid=params,
                             cv=3,
@@ -101,8 +96,8 @@ if __name__ == "__main__":
                                 )
         
         grid.fit(X_train, y_train)
-        # print(X_train)
-        #storing result
+
+        #storing best result for each regressor 
         result.append(
             {
                 'grid': grid,
@@ -116,10 +111,11 @@ if __name__ == "__main__":
         print('finished ', regressor)
 
     for i in result:
+        print('best r2 = ' , i['regressor'].score(X_test,y_test))
         print('bestscore =  ', i['best score'])
-        print(i['regressor'].score(X_test,y_test))
         print('best_params = ', i["best params"] )
 
+    
     #sorting result by best score
 
     result = sorted(result, key=itemgetter('best score'),reverse=True)
@@ -129,5 +125,7 @@ if __name__ == "__main__":
     joblib.dump(grid, 'models/regressor.pickle')
     joblib.dump(grid.best_estimator_.named_steps['add_kmeans_feature'].kmeans, "models/kmeans.pickle")
 
+
+    #saving x and y test data for use in the predict file.
     X_test.to_csv('data/X_test_data.csv')
     pd.DataFrame(y_test,columns=['y']).to_csv('data/y_test_data.csv')

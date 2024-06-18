@@ -16,12 +16,24 @@ from operator import itemgetter
 import joblib
 
 
-regressor_filepath = 'models/regressor.pickle'
-X_test = pd.read_csv('data/X_test_data.csv')
-y_test = pd.read_csv('data/y_test_data.csv')
 
 # Custom transformer to create new features
 class FeatureCreator_sqft(BaseEstimator, TransformerMixin):
+    """
+        Custom transformer for creating new features related to square footage.
+
+        This transformer calculates the difference between two specified square footage columns
+        and generates a new feature indicating whether the difference is positive, negative, or zero.
+
+        Parameters
+        ----------
+        sqrt : str
+            The column name for the square footage of the house.
+        sqft15 : str
+            The column name for the square footage of the 15 nearest neighbors.
+        sqrt_flag : str
+            The column name for the flag indicating whether the difference between `sqft15` and `sqrt` is positive, negative, or zero.
+    """
     def __init__(self, sqrt, sqft15, sqrt_flag):
         self.sqrt = sqrt
         self.sqft15 = sqft15
@@ -37,6 +49,19 @@ class FeatureCreator_sqft(BaseEstimator, TransformerMixin):
         return X
     
 class FeatureCreator_age(BaseEstimator, TransformerMixin):
+    """
+        Custom transformer for creating new features related to the age of the property and the years since last renovation.
+
+        This transformer calculates the age of the property and the years since the last renovation
+        based on the given year built and year renovated columns.
+
+        Parameters
+        ----------
+        yr_built : str
+            The column name for the year the property was built.
+        yr_reno : str
+            The column name for the year the property was last renovated.
+    """
     def __init__(self, yr_built, yr_reno ):
         self.yr_built = yr_built
         self.yr_reno = yr_reno
@@ -51,6 +76,17 @@ class FeatureCreator_age(BaseEstimator, TransformerMixin):
 
     
 class KMeansTransformer(BaseEstimator, TransformerMixin):
+    """
+        Custom transformer for applying KMeans clustering to geographical coordinates.
+
+        This transformer uses the KMeans algorithm to cluster data points based on their latitude and longitude
+        and adds the cluster labels as a new feature to the dataframe.
+
+        Parameters
+        ----------
+        n_clusters : int, optional (default=15)
+            The number of clusters to form as well as the number of centroids to generate.
+        """
     def __init__(self, n_clusters=15):
         self.n_clusters = n_clusters
         self.kmeans = None
@@ -74,6 +110,7 @@ class KMeansTransformer(BaseEstimator, TransformerMixin):
 numerical_features = ['bedrooms', 'bathrooms', 'sqft_living',
        'sqft_lot', 'floors','view', 'condition', 'grade',
        'sqft_above', 'sqft_basement','yr_since_last_reno','age_of_property']
+
 numerical_pipeline = Pipeline(steps=[
     ('scaler', StandardScaler())
 ])
@@ -84,9 +121,12 @@ categorical_features = ['waterfront',
                          'change_sqft_lot_flag',
                          'cluster'
                          ]
+
 categorical_pipeline = Pipeline(steps=[
     ('onehot', OneHotEncoder())
 ])
+
+
 preprocessor = ColumnTransformer(
     transformers=[
         ('num', numerical_pipeline, numerical_features),
